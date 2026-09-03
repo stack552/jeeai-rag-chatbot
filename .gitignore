@@ -1,0 +1,9 @@
+chroma_db/
+*.env
+eval_results.json
+ragas_scores*.json
+ragas_scores*.csv
+chunks_export*.txt
+__pycache__/
+*.pyc
+ragas_env/
