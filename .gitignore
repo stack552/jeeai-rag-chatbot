@@ -7,3 +7,6 @@ chunks_export*.txt
 __pycache__/
 *.pyc
 ragas_env/
+venv/
+*.db
+jeeai dev key
