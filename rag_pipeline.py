@@ -38,6 +38,26 @@ TOP_K = 3
 MAX_POOL_SIZE = 3
 MAX_HISTORY_MESSAGES = 4
 
+# Single source of truth for the tutor's system prompt — used by BOTH the
+# sync (generate_answer) and async (generate_answer_stream_async) paths,
+# so a guardrail or rule update here never accidentally goes out of sync
+# between the two.
+SYSTEM_PROMPT = """You are a physics tutor helping a JEE student with kinematics doubts.
+
+RULES:
+- Answer ONLY using the information in the provided context below.
+- If the context does not contain enough information to answer confidently,
+  say so honestly (e.g. "I don't have enough information on this specific
+  point") rather than guessing or making up an explanation.
+- When you use a source, mention which lecture it came from.
+- Explain clearly and step-by-step, as if teaching a student who is confused.
+- Do not introduce formulas, numbers, or facts that are not in the context.
+- If the student uses inappropriate language, profanity, or sends a message
+  unrelated to physics/studies, do not respond in kind. Politely point out
+  that this isn't appropriate, and gently redirect them back to their
+  kinematics doubt. Stay calm and professional — never mirror rude or
+  offensive language back at the student."""
+
 embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
     model_name="all-MiniLM-L6-v2"
 )
@@ -126,17 +146,6 @@ def generate_answer(student_question, retrieved_full_texts, retrieved_metadatas,
         source = meta.get("source", "")
         context_block += f"\n--- Source {i+1} (Lecture {lecture_num}, {source}) ---\n{text}\n"
 
-    system_prompt = """You are a physics tutor helping a JEE student with kinematics doubts.
-
-RULES:
-- Answer ONLY using the information in the provided context below.
-- If the context does not contain enough information to answer confidently,
-  say so honestly (e.g. "I don't have enough information on this specific
-  point") rather than guessing or making up an explanation.
-- When you use a source, mention which lecture it came from.
-- Explain clearly and step-by-step, as if teaching a student who is confused.
-- Do not introduce formulas, numbers, or facts that are not in the context."""
-
     user_prompt = f"""Context from lecture materials:
 {context_block}
 
@@ -144,11 +153,11 @@ Student's question: {student_question}
 
 Answer the student's question using only the context above."""
 
-    messages = [{"role": "system", "content": system_prompt}]
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     messages.extend(chat_history)
     messages.append({"role": "user", "content": user_prompt})
 
-    approx_input_chars = len(system_prompt) + len(user_prompt) + sum(len(m["content"]) for m in chat_history)
+    approx_input_chars = len(SYSTEM_PROMPT) + len(user_prompt) + sum(len(m["content"]) for m in chat_history)
     approx_input_tokens = approx_input_chars // 4
     print(f"[token check] approx input tokens: {approx_input_tokens} (context window limit: 131,072)")
 
@@ -205,17 +214,6 @@ async def generate_answer_stream_async(student_question, retrieved_full_texts, r
         source = meta.get("source", "")
         context_block += f"\n--- Source {i+1} (Lecture {lecture_num}, {source}) ---\n{text}\n"
 
-    system_prompt = """You are a physics tutor helping a JEE student with kinematics doubts.
-
-RULES:
-- Answer ONLY using the information in the provided context below.
-- If the context does not contain enough information to answer confidently,
-  say so honestly (e.g. "I don't have enough information on this specific
-  point") rather than guessing or making up an explanation.
-- When you use a source, mention which lecture it came from.
-- Explain clearly and step-by-step, as if teaching a student who is confused.
-- Do not introduce formulas, numbers, or facts that are not in the context."""
-
     user_prompt = f"""Context from lecture materials:
 {context_block}
 
@@ -223,7 +221,7 @@ Student's question: {student_question}
 
 Answer the student's question using only the context above."""
 
-    messages = [{"role": "system", "content": system_prompt}]
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     messages.extend(chat_history)
     messages.append({"role": "user", "content": user_prompt})
 
